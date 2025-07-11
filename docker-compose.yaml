@@ -1,19 +1,33 @@
-version: "3.9"
+version: "3.8"
 
 services:
   core:
     image: ghcr.io/defguard/defguard:latest
-    env_file:
-      - .env
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DEFGUARD_COOKIE_INSECURE: ${DEFGUARD_COOKIE_INSECURE}
+      DEFGUARD_SECRET_KEY: ${DEFGUARD_SECRET_KEY}
+      DEFGUARD_AUTH_SECRET: ${DEFGUARD_AUTH_SECRET}
+      DEFGUARD_GATEWAY_SECRET: ${DEFGUARD_GATEWAY_SECRET}
+      DEFGUARD_YUBIBRIDGE_SECRET: ${DEFGUARD_YUBIBRIDGE_SECRET}
+      DEFGUARD_DB_HOST: ${DEFGUARD_DB_HOST}
+      DEFGUARD_DB_PORT: ${DEFGUARD_DB_PORT}
+      DEFGUARD_DB_USER: ${DEFGUARD_DB_USER}
+      DEFGUARD_DB_PASSWORD: ${DEFGUARD_DB_PASSWORD}
+      DEFGUARD_DB_NAME: ${DEFGUARD_DB_NAME}
+      DEFGUARD_URL: ${DEFGUARD_URL}
+      DEFGUARD_ADMIN_GROUPNAME: ${DEFGUARD_ADMIN_GROUPNAME}
+      DEFGUARD_DEFAULT_ADMIN_PASSWORD: ${DEFGUARD_DEFAULT_ADMIN_PASSWORD}
+      DEFGUARD_LOG_LEVEL: ${DEFGUARD_LOG_LEVEL}
+      DATABASE_URL: ${DATABASE_URL}
+      RUST_BACKTRACE: 1
     ports:
-      # REST API
       - "8000:8000"
-      # gRPC
       - "50055:50055"
     depends_on:
-      - gateway
-    volumes:
-      - /etc/wireguard:/etc/wireguard
+      - db
 
   gateway:
     image: ghcr.io/defguard/gateway:latest
@@ -23,12 +37,22 @@ services:
       DEFGUARD_TOKEN: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJEZWZHdWFyZCIsInN1YiI6IlRlc3ROZXQiLCJjbGllbnRfaWQiOiIiLCJleHAiOjU5NjE3NDcwNzYsIm5iZiI6MTY2Njc3OTc4MSwicm9sZXMiOltdfQ.uEUMnw_gO23W0K2q3N1lToeP0D2zAY1swr8N-84sRHA
       RUST_LOG: debug
     ports:
-      # WireGuard gRPC
       - "50051:50051/udp"
     depends_on:
       - core
     cap_add:
       - NET_ADMIN
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${DEFGUARD_DB_NAME}
+      POSTGRES_USER: ${DEFGUARD_DB_USER}
+      POSTGRES_PASSWORD: ${DEFGUARD_DB_PASSWORD}
+    volumes:
+      - ./.volumes/db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
 
   device:
     build:
